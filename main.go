@@ -22,13 +22,13 @@ func main(){
 	router := gin.new()
 	router.Use(gin.Logger())
 
-	routes.UserRoutes(router)
-	router.use(middlewares.Authentication())
+	router.userRoutes(router)
+	router.use(middleware.Authentication())
 
 	router.GET("/addtocart", app.AddToCart())
 	router.GET("/removeitem",app.RemoveItem())
 	router.GET("/cartcheckout",app.BuyFromCart())
-	router.GET("/instantbuy",app.InsatantBuy())
+	router.GET("/instantbuy",app.InstantBuy())
 
 	log.Fatal(router.Run(":"+port))
 }
