@@ -144,6 +144,7 @@ func GetItemFromCart() gin.HandlerFunc {
 
 		if err!= nil{
 			log.Println(err)
+			c.IndentedJSON(500, "Internal Server error")
 		}
 
 		var listing []bson.M
