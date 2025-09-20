@@ -10,7 +10,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 var (
@@ -66,7 +65,8 @@ func RemoveCartItem(ctx context.Context, prodCollection, userColletion *mongo.Co
 
 	filter := bson.D{primitive.E{Key: "_id", Value: id}}
 
-	update := bson.M{primitive.E{Key: "$pull", Value: bson.M{"Usercart": bson.M{"_id": productID}}}}
+	//update := bson.M{{Key: "$pull", Value: bson.M{"usercart": bson.M{{Key:"_id", Value: productID}}}}
+	update := bson.M{"$pull": bson.M{"usercart": bson.M{"_id": productID}}}
 
 	_, err = userColletion.UpdateMany(ctx, filter, update)
 	if err != nil {
@@ -95,7 +95,7 @@ func BuyItemFromCart(ctx context.Context, userColletion *mongo.Collection, userI
 	unwind := bson.D{primitive.E{Key: "$unwind", Value: bson.D{primitive.E{Key: "path", Value: "$usercart"}}}}
 	grouping := bson.D{primitive.E{Key: "$group", Value: bson.D{primitive.E{Key: "_id", Value: "$_id"}, primitive.E{Key: "total", Value: bson.D{primitive.E{Key: "$sum", Value: "$usercart.price"}}}}}}
 
-	currentresults, err := userColletion.aggregate(ctx, mongo.Pipeline{unwind, grouping})
+	currentresults, err := userColletion.Aggregate(ctx, mongo.Pipeline{unwind, grouping})
 
 	ctx.Done()
 
@@ -143,7 +143,8 @@ func BuyItemFromCart(ctx context.Context, userColletion *mongo.Collection, userI
 	usercart_empty := make([]models.ProductUser, 0)
 
 	filter3 := bson.D{primitive.E{Key: "_id", Value: id}}
-	update3 := bson.D{"$set": bson.D{"usercart": usercart_empty}}
+	update3 := bson.D{primitive.E{Key: "$set", Value: bson.D{primitive.E{Key: "usercart", Value: usercart_empty}}}}
+	//update3 := bson.D{"$set": bson.D{"usercart": usercart_empty}}
 
 	_, err = userColletion.UpdateOne(ctx, filter3, update3)
 	if err != nil {

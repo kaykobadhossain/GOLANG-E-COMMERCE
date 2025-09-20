@@ -2,7 +2,6 @@ package token
 
 import (
 	"context"
-	"go/token"
 	"log"
 	"os"
 	"time"
@@ -15,77 +14,75 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-
-type SignedDetails struct{
-	Email string
+type SignedDetails struct {
+	Email      string
 	First_Name string
-	Last_Name string
-	Uid string
-	jwt.StandardClaims
+	Last_Name  string
+	Uid        string
+	jwt.RegisteredClaims
 }
 
-var UserData *mongo.Collection = database.UserData(database.Client,"Users")
+var UserData *mongo.Collection = database.UserData(database.Client, "Users")
 var SECRET_KEY = os.Getenv("SECRET_KEY")
 
-func TokenGenerator(email string, firstname string, lastname string , uid string )(signedtoken string, signedrefreshtoken string, err error){
+func TokenGenerator(email string, firstname string, lastname string, uid string) (signedtoken string, signedrefreshtoken string, err error) {
 
 	claims := &SignedDetails{
-		Email: email,
+		Email:      email,
 		First_Name: firstname,
-		Last_Name: lastname,
-		Uid: uid,
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt:time.Now().Local().Add(time.Hour * time.Duration(24)).Unix(),
+		Last_Name:  lastname,
+		Uid:        uid,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Local().Add(time.Hour * time.Duration(24))),
 		},
 	}
 	refreshclaims := &SignedDetails{
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt:time.Now().Local().Add(time.Hour * time.Duration(7*24)).Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Local().Add(time.Hour * time.Duration(7*24))),
 		},
 	}
 
-	token,err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(SECRET_KEY))
-	if err!= nil {
-		return "","",err
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(SECRET_KEY))
+	if err != nil {
+		return "", "", err
 	}
 
-	refreshtoken,err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshclaims).SignedString([]byte(SECRET_KEY))
-	if err!= nil {
+	refreshtoken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshclaims).SignedString([]byte(SECRET_KEY))
+	if err != nil {
 		log.Panic(err)
 		return
 	}
 
-	return token, refreshtoken ,err
+	return token, refreshtoken, err
 
 }
 
-func ValidateToken(signedtoken string ) (claims *SignedDetails, msg string){
+func ValidateToken(signedtoken string) (claims *SignedDetails, msg string) {
 
-
-	token,err := jwt.ParseWithClaims(signedtoken, &SignedDetails{}, func(token *jwt.Token)(interface{},error){
+	token, err := jwt.ParseWithClaims(signedtoken, &SignedDetails{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(SECRET_KEY), nil
 	})
 
-	if err!= nil{
+	if err != nil {
 		msg = err.Error()
-		return 
+		return
 	}
 
 	claims, ok := token.Claims.(*SignedDetails)
-	if !ok{
+	if !ok {
 		msg = "the token is invalid"
-		return 
+		return
 	}
-	if claims.ExpiresAt < time.Now().Local().Unix() {
+	if claims.RegisteredClaims.ExpiresAt.Before(time.Now().Local()) {
 		msg = "the token is already expired"
-		return 
+		return
 	}
 	return claims, msg
-	
+
 }
 
-func UpdateAllTokens(signedtoken string, signedrefreshtoken string, userid string){
-	
+func UpdateAllTokens(signedtoken string, signedrefreshtoken string, userid string) {
+
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	var updateobj primitive.D
 
